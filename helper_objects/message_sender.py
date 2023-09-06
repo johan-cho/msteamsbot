@@ -25,11 +25,10 @@ class MessageSender(Scheduler):
     def __init__(self, connector_card: connectorcard, hours_dict: dict[dict[str, str]]):
         """Initialize the message sender class."""
         super().__init__()
-        self.connector_card = connector_card
-        self.hours_dict = hours_dict
-        self.formslink = connector_card.addLinkButton(
+        self.connector_card = connector_card.addLinkButton(
             MessageSender.BUTTON_MESSAGE, MessageSender.BUTTON_URL
         )
+        self.hours_dict = hours_dict
 
         logging.info("MessageSender connected to %s", connector_card.hookurl)
 
@@ -47,11 +46,11 @@ class MessageSender(Scheduler):
     def run(self) -> NoReturn:
         """Run the message sender."""
         for time_tuple in self.hours_dict.items():
-            self.every().minute.do(self.threader, self.send_message, True, time_tuple)
-            # job: Job = getattr(self.every(), time_tuple[0])
-            # job.at(times["start"]).do(
-            #     self.threader, self.send_message, True, time_tuple[1]["end"]
-            # )
+            # self.every().minute.do(self.threader, self.send_message, True, time_tuple)
+            job: Job = getattr(self.every(), time_tuple[0])
+            job.at(time_tuple[1]["start"]).do(
+                self.threader, self.send_message, True, time_tuple[1]["end"]
+            )
 
         while True:
             self.run_pending()
@@ -69,7 +68,6 @@ class MessageSender(Scheduler):
         )
         try:
             teams_message.send()
-            self.formslink.send()
         except Exception as error:
             logging.error("Error sending message: %s", error)
 
