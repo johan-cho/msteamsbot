@@ -1,14 +1,18 @@
 """Message sender class."""
+import os
 import time
 import logging
 from datetime import date
 from typing import NoReturn
+import dotenv
 from schedule import Job, Scheduler
 from pymsteams import connectorcard
 
 from helper_functions import generate_message, format_time_str, threader
 
 # pylint: disable=broad-except
+
+dotenv.load_dotenv()
 
 
 class MessageSender(Scheduler):
@@ -17,29 +21,30 @@ class MessageSender(Scheduler):
     Attributes:
         connector_card: The connector card to send messages to.
         hours_dict: The dictionary of hours to send messages.
+        exceptions: The dictionary of exceptions to the message.
     """
 
-    BUTTON_MESSAGE = "Click here to fill out the form."
-    BUTTON_URL = "https://forms.office.com/r/MMhJWEC2LW"
+    FORMS_BUTTON_MESSAGE = "Check In"
+    TEAMS_BUTTON_MESSAGE = "Join Meeting"
 
     def __init__(
         self,
         connector_card: connectorcard,
         hours_dict: dict[dict[str, str]],
         exceptions: dict[date, str] = None,
-    ):
+    ) -> None:
         """Initialize the message sender.
 
         Args:
-            connector_card: The connector card to send messages to.
-            hours_dict: The dictionary of hours to send messages.
-            exceptions: The dictionary of exceptions to the message.
+            connector_card (connectorcard): The connector card to send messages to.
+            hours_dict (dict[dict[str, str]]): The dictionary of hours to send messages, formatted by {"wednesday", {"start": "06:00", "end": "20:00"}.
+            exceptions (dict[date, str]): The dictionary of exceptions to the message, formatted by {date: "message"}.
         """
 
         super().__init__()
         self.connector_card = connector_card.addLinkButton(
-            MessageSender.BUTTON_MESSAGE, MessageSender.BUTTON_URL
-        )
+            MessageSender.FORMS_BUTTON_MESSAGE, os.environ.get("FORMS_URL")
+        ).addLinkButton(MessageSender.TEAMS_BUTTON_MESSAGE, os.environ.get("TEAMS_URL"))
         self.hours_dict = hours_dict
         self.exceptions = exceptions or {}
 
@@ -48,10 +53,15 @@ class MessageSender(Scheduler):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.connector_card.hookurl}, {self.hours_dict})"
 
-    def run(self) -> NoReturn:
-        """Run the message sender."""
+    def run(self, dev: bool = False) -> NoReturn:
+        """Run the message sender.
+
+        Args:
+            dev (bool): Whether to run in development mode, defaults to False."""
         for time_tuple in self.hours_dict.items():
-            # self.every().minute.do(self.threader, self.send_message, True, time_tuple)
+            if dev:
+                self.every().minute.do(threader, self.send_message, True, time_tuple)
+                continue
             job: Job = getattr(self.every(), time_tuple[0])
             job.at(time_tuple[1]["start"], tz="America/New_York").do(
                 threader, self.send_message, True, time_tuple[1]["end"]

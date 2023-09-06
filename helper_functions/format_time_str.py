@@ -6,7 +6,7 @@ def format_time_str(time_str: str) -> str:
     """Format the time string.
 
     Args:
-        time_str: The time string to format.
+        time_str (str): The time string to format.
     Returns:
         The formatted time string.
     """
