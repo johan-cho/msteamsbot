@@ -64,7 +64,7 @@ class MessageSender(Scheduler):
                 continue
             job: Job = getattr(self.every(), time_tuple[0])
             job.at(time_tuple[1]["start"], tz="America/New_York").do(
-                threader, self.send_message, True, time_tuple[1]["end"]
+                threader, self.send_message, True, time_tuple
             )
 
         while True:
