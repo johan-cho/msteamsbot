@@ -28,7 +28,7 @@ def generate_message(end_time: str) -> str:
 
     return (
         random.choice(HELLO_ARRAY) + ", my name is Johan Cho, "
-        "and I tutor in IE3425 Engineer Database Systems (maybe some other class if you need it). "
+        "and I tutor in Engineer Database Systems (and *maybe* another class). "
         "I'll be available until " + format_time_str(end_time) + " EST. "
         "Please send your name and question or assignment! "
     )
