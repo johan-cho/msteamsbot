@@ -11,6 +11,7 @@ from pymsteams import connectorcard
 from helper_functions import generate_message, format_time_str, threader
 
 # pylint: disable=broad-except
+# pylint: disable=line-too-long
 
 dotenv.load_dotenv()
 
@@ -19,9 +20,9 @@ class MessageSender(Scheduler):
     """Message sender class.
 
     Attributes:
-        connector_card: The connector card to send messages to.
-        hours_dict: The dictionary of hours to send messages.
-        exceptions: The dictionary of exceptions to the message.
+        connector_card (connectorcard): The connector card to send messages to.
+        hours_dict (dict[dict[str, str]]): The dictionary of hours to send messages, formatted by {"wednesday", {"start": "06:00", "end": "20:00"}.
+        exceptions (dict[date, str]): The dictionary of exceptions to the message, formatted by {date: "message"}.
     """
 
     FORMS_BUTTON_MESSAGE = "Check In"
@@ -30,7 +31,7 @@ class MessageSender(Scheduler):
     def __init__(
         self,
         connector_card: connectorcard,
-        hours_dict: dict[dict[str, str]],
+        hours_dict: dict[str, dict[str, str]],
         exceptions: dict[date, str] = None,
     ) -> None:
         """Initialize the message sender.
@@ -44,7 +45,7 @@ class MessageSender(Scheduler):
         super().__init__()
         self.connector_card = connector_card.addLinkButton(
             MessageSender.FORMS_BUTTON_MESSAGE, os.environ.get("FORMS_URL")
-        ).addLinkButton(MessageSender.TEAMS_BUTTON_MESSAGE, os.environ.get("TEAMS_URL"))
+        )
         self.hours_dict = hours_dict
         self.exceptions = exceptions or {}
 
@@ -75,9 +76,10 @@ class MessageSender(Scheduler):
         """Send a message to the user.
 
         Args:
-            end_time: The end time of the current hour.
+            time_tuple (tuple[str, dict[str, str]]): The tuple of the day
+            and the dictionary of the start and end times.
         """
-        message_text = generate_message(time_tuple[1]["end"], self.exceptions)
+        message_text = generate_message(time_tuple, self.exceptions)
         teams_message = self.connector_card.text(message_text).title(
             f"IE3425 {time_tuple[0].capitalize()} Tutoring {format_time_str(time_tuple[1]['start'])} - {format_time_str(time_tuple[1]['end'])}"
         )
