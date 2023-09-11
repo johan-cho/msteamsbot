@@ -9,7 +9,7 @@ from pymsteams import connectorcard
 from helper_objects import MessageSender
 
 dotenv.load_dotenv()
-DEV = True
+DEV = False
 
 HOURS_DICT = {
     "monday": {"start": "17:45", "end": "19:00"},
