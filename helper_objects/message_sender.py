@@ -1,14 +1,13 @@
 """Message sender class."""
-import os
 import time
 import logging
-from datetime import date
-from typing import NoReturn
+import weakref
+from typing import NoReturn, Self
 import dotenv
 from schedule import Job, Scheduler
 from pymsteams import connectorcard
 
-from helper_functions import generate_message, format_time_str, threader
+from helper_functions import threader
 
 # pylint: disable=broad-except
 # pylint: disable=line-too-long
@@ -20,72 +19,86 @@ class MessageSender(Scheduler):
     """Message sender class.
 
     Attributes:
+        instances (list[Self]): The list of instances of the message sender.
         connector_card (connectorcard): The connector card to send messages to.
-        hours_dict (dict[dict[str, str]]): The dictionary of hours to send messages, formatted by {"wednesday", {"start": "06:00", "end": "20:00"}.
-        exceptions (dict[date, str]): The dictionary of exceptions to the message, formatted by {date: "message"}.
     """
 
-    FORMS_BUTTON_MESSAGE = "Check In"
-    TEAMS_BUTTON_MESSAGE = "Join Meeting"
+    instances: list[Self] = []
 
-    def __init__(
-        self,
-        connector_card: connectorcard,
-        hours_dict: dict[str, dict[str, str]],
-        exceptions: dict[date, str] = None,
-    ) -> None:
+    def __init__(self, connector_card: connectorcard) -> None:
         """Initialize the message sender.
 
         Args:
             connector_card (connectorcard): The connector card to send messages to.
-            hours_dict (dict[dict[str, str]]): The dictionary of hours to send messages, formatted by {"wednesday", {"start": "06:00", "end": "20:00"}.
-            exceptions (dict[date, str]): The dictionary of exceptions to the message, formatted by {date: "message"}.
         """
 
         super().__init__()
-        self.connector_card = connector_card.addLinkButton(
-            MessageSender.FORMS_BUTTON_MESSAGE, os.environ.get("FORMS_URL")
-        )
-        self.hours_dict = hours_dict
-        self.exceptions = exceptions or {}
-
+        self.connector_card = connector_card
+        self.__class__.instances.append(weakref.proxy(self))
         logging.info("MessageSender connected to %s", connector_card.hookurl)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.connector_card.hookurl}, {self.hours_dict})"
+        return f"{self.__class__.__name__}({self.connector_card.hookurl})"
 
-    def run(self, dev: bool = False) -> NoReturn:
+    def schedule(
+        self,
+        interval: str,
+        *args,
+        at: str = None,
+        every: int = None,
+        tz: str = "America/New_York",
+    ) -> None:
+        """Schedule a message to be sent every interval.
+
+        Args:
+            interval (str): The interval to send the message.
+            at (str): The time to send the message, defaults to None.
+            every (int): The amount of times to send the message, defaults to None.
+            tz (str): The timezone to send the message, defaults to "America/New_York".
+        """
+
+        if interval in [
+            "second",
+            "minute",
+            "hour",
+            "day",
+            "week",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        ]:
+            job: Job = getattr(self.every(), interval)
+            job.at(at or "00:00", tz=tz).do(threader, self.send_message, True, *args)
+        else:
+            job = getattr(self.every(every), interval)
+            job.do(threader, self.send_message, True, *args)
+
+    def run(self, __all: bool = False, delay: int = 5) -> NoReturn:
         """Run the message sender.
 
         Args:
-            dev (bool): Whether to run in development mode, defaults to False."""
-        for time_tuple in self.hours_dict.items():
-            if dev:
-                self.every().minute.do(threader, self.send_message, True, time_tuple)
-                continue
-            job: Job = getattr(self.every(), time_tuple[0])
-            job.at(time_tuple[1]["start"], tz="America/New_York").do(
-                threader, self.send_message, True, time_tuple
-            )
-
+            dev (bool): Whether to run in development mode, defaults to False.
+            delay (int): The delay between checks, defaults to 5."""
         while True:
-            self.run_pending()
-            time.sleep(1)
+            time.sleep(delay)
+            if __all:
+                for __inst in self.__class__.instances:
+                    __inst.run_pending()
+            else:
+                self.run_pending()
 
-    def send_message(self, time_tuple: tuple[str, dict[str, str]]) -> None:
-        """Send a message to the user.
-
-        Args:
-            time_tuple (tuple[str, dict[str, str]]): The tuple of the day
-            and the dictionary of the start and end times.
-        """
-        message_text = generate_message(time_tuple, self.exceptions)
-        teams_message = self.connector_card.text(message_text).title(
-            f"IE3425 {time_tuple[0].capitalize()} Tutoring {format_time_str(time_tuple[1]['start'])} - {format_time_str(time_tuple[1]['end'])}"
-        )
+    def send_message(self) -> None:
+        """Send the connector card."""
         try:
-            teams_message.send()
+            self.connector_card.send()
         except Exception as error:
             logging.error("Error sending message: %s", error)
-
-        logging.info("Message: %s sent to %s", message_text, teams_message.hookurl)
+        logging.info(
+            "Message: %s sent to %s",
+            self.connector_card.payload["text"],
+            self.connector_card.hookurl,
+        )
