@@ -3,6 +3,7 @@ import time
 import logging
 import weakref
 from typing import NoReturn
+from typing_extensions import Self
 import dotenv
 from schedule import Job, Scheduler
 from pymsteams import connectorcard
@@ -23,7 +24,7 @@ class MessageSender(Scheduler):
         connector_card (connectorcard): The connector card to send messages to.
     """
 
-    instances: list = []
+    instances: list[Self] = []
 
     def __init__(self, connector_card: connectorcard) -> None:
         """Initialize the message sender.
