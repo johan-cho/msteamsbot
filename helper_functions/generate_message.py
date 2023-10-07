@@ -37,17 +37,12 @@ def generate_message(
         A message based on the end time.
     """
 
-    execptions = exceptions or {}
-
-    return (
-        execptions[date.today()]
-        if date.today() in execptions
-        else (
-            f"{random.choice(HELLO_ARRAY)}, my name is Johan Cho "
-            "and I primarily tutor in Engineer Database Systems. "
-            f"I'm available until {format_time_str(time_tuple[1]['end'])} EST. "
-            f"I'm {ROOM_DICT.get(time_tuple[0], ' virtual today.')} "
-            "Reply to this with your name and question or assignment, "
-            "then check in (button below) and join the meeting! "
-        )
+    return (exceptions or {}).get(
+        date.today(),
+        f"{random.choice(HELLO_ARRAY)}, my name is Johan Cho "
+        "and I primarily tutor in Engineer Database Systems. "
+        f"I'm available until {format_time_str(time_tuple[1]['end'])} EST. "
+        f"I'm {ROOM_DICT.get(time_tuple[0], ' virtual today.')} "
+        "Reply to this with your name and question or assignment, "
+        "then check in (button below) and join the meeting! ",
     )

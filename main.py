@@ -1,12 +1,12 @@
 """Main file for the project."""
 import os
 import logging
-from datetime import date
 
 import dotenv
 from pymsteams import connectorcard
 
 from helper_objects import MessageSender
+from helper_functions import generate_message, format_time_str
 
 dotenv.load_dotenv()
 DEV = False
@@ -26,11 +26,25 @@ EXCEPTION_DICT: dict = {
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
+    message_sender_list: list[MessageSender] = []
+    for weekday, message in HOURS_DICT.items():
+        message_sender = MessageSender(
+            connectorcard(
+                os.environ.get("DEV_TEAMS_WEBHOOK_URL")
+                if DEV
+                else os.environ.get("TEAMS_WEBHOOK_URL")
+            )
+            .addLinkButton("Check In", os.environ.get("FORMS_URL"))
+            .text(generate_message((weekday, message), EXCEPTION_DICT))
+            .title(
+                f"IE3425 {weekday.capitalize()} Tutoring {format_time_str(message['start'])} - {format_time_str(message['end'])}"
+            )
+        )
 
-    connector = connectorcard(
-        os.environ.get("DEV_TEAMS_WEBHOOK_URL")
-        if DEV
-        else os.environ.get("TEAMS_WEBHOOK_URL")
-    )
-    message_sender = MessageSender(connector, HOURS_DICT, EXCEPTION_DICT)
-    message_sender.run(DEV)
+        if DEV:
+            message_sender.schedule("seconds", every=10)
+        else:
+            message_sender.schedule(weekday, at=message["start"])
+        message_sender_list.append(message_sender)
+
+    message_sender_list[0].run(True)
