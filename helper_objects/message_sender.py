@@ -2,8 +2,7 @@
 import time
 import logging
 import weakref
-from typing import NoReturn
-from typing_extensions import Self
+from typing import NoReturn, Self
 import dotenv
 from schedule import Job, Scheduler
 from pymsteams import connectorcard
@@ -48,7 +47,8 @@ class MessageSender(Scheduler):
         at: str = None,
         every: int = None,
         tz: str = "America/New_York",
-    ) -> None:
+        inplace: bool = True,
+    ) -> Self | None:
         """Schedule a message to be sent every interval.
 
         Args:
@@ -56,6 +56,8 @@ class MessageSender(Scheduler):
             at (str): The time to send the message, defaults to None.
             every (int): The amount of times to send the message, defaults to None.
             tz (str): The timezone to send the message, defaults to "America/New_York".
+        Returns:
+            Self: The message sender instance. None if inplace is False.
         """
 
         if interval in [
@@ -77,6 +79,9 @@ class MessageSender(Scheduler):
         else:
             job = getattr(self.every(every), interval)
             job.do(threader, self.send_message, True, *args)
+        logging.info("Scheduled %s", job)
+        if inplace:
+            return self
 
     def run(self, __all: bool = False, delay: int = 5) -> NoReturn:
         """Run the message sender.

@@ -9,7 +9,7 @@ from helper_objects import MessageSender
 from helper_functions import generate_message, format_time_str
 
 dotenv.load_dotenv()
-DEV = False
+DEV = True
 
 HOURS_DICT = {
     "monday": {"start": "17:45", "end": "19:00"},
@@ -40,7 +40,6 @@ if __name__ == "__main__":
                 f"IE3425 {weekday.capitalize()} Tutoring {format_time_str(message['start'])} - {format_time_str(message['end'])}"
             )
         )
-
         if DEV:
             message_sender.schedule("seconds", every=10)
         else:
