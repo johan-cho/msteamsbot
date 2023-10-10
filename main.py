@@ -9,7 +9,7 @@ from helper_objects import MessageSender
 from helper_functions import generate_message, format_time_str
 
 dotenv.load_dotenv()
-DEV = True
+DEV = False
 
 HOURS_DICT = {
     "monday": {"start": "17:45", "end": "19:00"},
