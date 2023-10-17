@@ -13,5 +13,5 @@ RUN apt-get update && apt-get install -y tzdata
 ENV TZ=America/New_York
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ >/etc/timezone
 
-CMD ["python3", "main.py"]
+CMD ["python3", "main.py", "--no-dev"]
 # CMD ["wait"]

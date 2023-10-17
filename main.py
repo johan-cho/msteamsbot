@@ -2,8 +2,9 @@
 import os
 import time
 import logging
+import argparse
 from datetime import date
-from typing import NoReturn
+from typing import NoReturn, Any
 import dotenv
 from pymsteams import connectorcard
 
@@ -12,7 +13,7 @@ from helper_functions import generate_message, format_time_str
 
 # pylint: disable=line-too-long
 dotenv.load_dotenv()
-DEV = False
+ARGPARSE = argparse.ArgumentParser()
 
 HOURS_DICT = {
     "monday": {"start": "17:45", "end": "19:00"},
@@ -29,15 +30,38 @@ EXCEPTION_DICT: dict = {
 }
 
 
-def main() -> NoReturn | None:
-    """Main function for the project."""
+def add_arg(parser: argparse.ArgumentParser, _arg: str) -> Any:
+    """Add arguments to the argument parser.
+
+    Args:
+        parser (argparse.ArgumentParser): The argument parser to add the argument to.
+        _arg (str): The name of the argument to add.
+    """
+    parser.add_argument(
+        f"--{_arg}",
+        type=bool,
+        help=f"Whether or not to run in {_arg} mode.",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    arg_result = getattr(parser.parse_args(), _arg)
+    logging.info("Argument %s set to %s", _arg, arg_result)
+    return arg_result
+
+
+def main(dev: bool) -> NoReturn | None:
+    """Main function for the project.
+
+    Args:
+        dev (bool): Whether or not to run in development mode.
+    """
 
     message_sender_list: list[MessageSender] = []
     for weekday, message in HOURS_DICT.items():
         message_sender = MessageSender(
             connectorcard(
                 os.environ.get("DEV_TEAMS_WEBHOOK_URL")
-                if DEV
+                if dev
                 else os.environ.get("TEAMS_WEBHOOK_URL")
             )
             .addLinkButton("Check In", os.environ.get("FORMS_URL"))
@@ -46,7 +70,7 @@ def main() -> NoReturn | None:
                 f"IE3425 {weekday.capitalize()} Tutoring {format_time_str(message['start'])} - {format_time_str(message['end'])}"
             )
         )
-        if DEV:
+        if dev:
             message_sender.schedule("seconds", every=10)
         else:
             message_sender.schedule(weekday, at=message["start"])
@@ -71,4 +95,4 @@ def run_senders(senders: list[MessageSender], delay: int = 5) -> NoReturn | None
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
-    main()
+    main(add_arg(ARGPARSE, "dev"))
