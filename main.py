@@ -30,20 +30,14 @@ EXCEPTION_DICT: dict = {
 }
 
 
-def add_arg(parser: argparse.ArgumentParser, _arg: str) -> Any:
+def add_arg(parser: argparse.ArgumentParser, _arg: str, *args, **kwargs) -> Any:
     """Add arguments to the argument parser.
 
     Args:
         parser (argparse.ArgumentParser): The argument parser to add the argument to.
         _arg (str): The name of the argument to add.
     """
-    parser.add_argument(
-        f"--{_arg}",
-        type=bool,
-        help=f"Whether or not to run in {_arg} mode.",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-    )
+    parser.add_argument(f"--{_arg}", *args, **kwargs)
     arg_result = getattr(parser.parse_args(), _arg)
     logging.info("Argument %s set to %s", _arg, arg_result)
     return arg_result
@@ -95,4 +89,11 @@ def run_senders(senders: list[MessageSender], delay: int = 5) -> NoReturn | None
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
-    main(add_arg(ARGPARSE, "dev"))
+    dev_mode = add_arg(
+        ARGPARSE,
+        "dev",
+        help="Whether or not to run in dev mode.",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    main(dev=dev_mode)
