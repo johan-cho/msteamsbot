@@ -1,15 +1,16 @@
 """Main file for the project."""
-import os
-import time
-import logging
 import argparse
+import logging
+import os
+import threading
+import time
 from datetime import date
-from typing import NoReturn, Any
-import dotenv
-from pymsteams import connectorcard
+from typing import Any, NoReturn
 
+import dotenv
+
+from helper_functions import format_time_str, generate_message
 from helper_objects import MessageSender
-from helper_functions import generate_message, format_time_str
 
 # pylint: disable=line-too-long
 dotenv.load_dotenv()
@@ -52,8 +53,8 @@ def main(dev: bool) -> NoReturn | None:
 
     message_sender_list: list[MessageSender] = []
     for weekday, message in HOURS_DICT.items():
-        message_sender = MessageSender(
-            connectorcard(
+        message_sender = (
+            MessageSender(
                 os.environ.get("DEV_TEAMS_WEBHOOK_URL")
                 if dev
                 else os.environ.get("TEAMS_WEBHOOK_URL")
@@ -81,10 +82,13 @@ def run_senders(senders: list[MessageSender], delay: int = 5) -> NoReturn | None
         delay (int): The delay between each message sender starting.
     """
 
-    while senders:
+    worker_thread = threading.Thread(target=MessageSender.worker_main)
+    worker_thread.start()
+
+    while True:
         for sender in senders:
             sender.run_pending()
-        time.sleep(delay)
+            time.sleep(delay)
 
 
 if __name__ == "__main__":
